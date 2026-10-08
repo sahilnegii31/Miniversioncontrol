@@ -1,32 +1,42 @@
 #ifndef COMMIT_H
 #define COMMIT_H
 
-#include<iostream>
+#include <iostream>
+#include <string>
+
 using namespace std;
 
-class commit {
-    public: 
-        string commitId;
-        string message ; 
-        string filecontent;
-        string author;
-        string timestamp;
-        commit* prev;
-        commit(string id, string message , string filecontent, string timestamp ){
-            commitId = id;
-            this->message = message;
-            this->filecontent = filecontent;
-            this->timestamp = timestamp;
-            this->author = "someone" ;
+//MODULE 1
 
-        }
+class Commit {
+private:
+    string commitId;        
+    string message;         
+    string fileContent;     
+    string author;          
+    string timestamp;       
+    Commit* prev;           // Pointer to previous commit (backward linked list)
+
+public:
+
+    Commit(string id, string msg, string files, string auth, string time);
+
+
+    string getId() const;
+    string getMessage() const;
+    string getFileContent() const;
+    string getAuthor() const;
+    string getTimestamp() const;
+    Commit* getPrev() const;
+
+    void setPrev(Commit* previousCommit);
+
+
+    void display() const;
 };
 
-extern commit* head; //Jaha hum abhi hai
-
-string generateId();
-string generateCurrentTime();
-void makeCommit( string content , string message);
-void showHistory();
+// Helper functions for Commit generation
+string generateCommitId();
+string getCurrentTimestamp();
 
 #endif
