@@ -1,39 +1,78 @@
 #include "commit.h"
-#include<iostream>
+#include <iostream>
 #include <string>
-// static int counter = 0 ;
+#include <ctime>
+
 using namespace std;
 
-commit* head = nullptr ; // yaha pe extern define hai 
-
-string generateId(){
-    static int counter = 0 ; 
-    string commitId = "C" + to_string(counter+1);
-    cout << commitId;
-    counter++ ;
-    return commitId;
+// Constructor: Initializes all attributes and sets prev pointer to nullptr
+Commit::Commit(string id, string msg, string files, string auth, string time) {
+    commitId = id;
+    message = msg;
+    fileContent = files;
+    author = auth;
+    timestamp = time;
+    prev = nullptr;
 }
 
-string generateCurrentTime(){
-    return "testing";
+
+string Commit::getId() const { 
+    return commitId; 
 }
 
-// working of makecommit-
-//takes content and the message then add it to the new commit node and connect the new node to the head and then move the head to the new node
-void makeCommit(string content , string message){
-    commit* newcommit = new commit(generateId(), message , content , generateCurrentTime());
-    // newcommit->commitId = generateId();
-    // newcommit->message = message;
-    // newcommit->filecontent = content;
-    // newcommit->timestamp = generateCurrentTime();
-    // newcommit->prev = head ; 
-    head = newcommit ; 
+string Commit::getMessage() const { 
+    return message; 
 }
 
-int main(){
-    generateId();
-    generateId();
-    generateId();
-    generateId();
-    return 0;
+string Commit::getFileContent() const { 
+    return fileContent; 
+}
+
+string Commit::getAuthor() const { 
+    return author; 
+}
+
+string Commit::getTimestamp() const { 
+    return timestamp; 
+}
+
+Commit* Commit::getPrev() const { 
+    return prev; 
+}
+
+
+void Commit::setPrev(Commit* previousCommit) {
+    prev = previousCommit;
+}
+
+// Display commit details in a neat card format
+void Commit::display() const {
+    cout << "--------------------------------------------------" << endl;
+    cout << "Commit ID : " << commitId << endl;
+    cout << "Author    : " << author << endl;
+    cout << "Date/Time : " << timestamp << endl;
+    cout << "Files     : " << (fileContent.empty() ? "(None)" : fileContent) << endl;
+    cout << "Message   : " << message << endl;
+    cout << "--------------------------------------------------" << endl;
+}
+
+string generateCommitId() {
+    static int counter = 1;
+    string id = "C" + to_string(counter);
+    counter++;
+    return id;
+}
+
+// Generates real system timestamp formatted as readable text
+string getCurrentTimestamp() {
+    time_t now = time(0);
+    char* dt = ctime(&now);
+    string timeStr(dt);
+
+    // ctime appends a newline at the end, let's remove it
+    
+    if (!timeStr.empty() && timeStr.back() == '\n') {
+        timeStr.pop_back();
+    }
+    return timeStr;
 }
