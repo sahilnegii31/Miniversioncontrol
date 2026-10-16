@@ -2,17 +2,21 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <direct.h>
 #include <sys/stat.h>
+#include <cstdlib>
+
 using namespace std;
 
 void ensureDataFolder() {
-    mkdir("data", 0755);
+    _mkdir("data");
 }
 
 int loadUsers(User users[], int maxUsers) {
     ensureDataFolder();
 
     ifstream file("data/users.txt");
+
     if (!file.is_open()) {
         return 0;
     }
@@ -22,6 +26,7 @@ int loadUsers(User users[], int maxUsers) {
 
     while (getline(file, line) && count < maxUsers) {
         int colonPos = -1;
+
         for (int i = 0; i < (int)line.size(); i++) {
             if (line[i] == ':') {
                 colonPos = i;
@@ -29,13 +34,15 @@ int loadUsers(User users[], int maxUsers) {
             }
         }
 
-        if (colonPos == -1) continue;
+        if (colonPos == -1)
+            continue;
 
         string uname = line.substr(0, colonPos);
-        string pass  = line.substr(colonPos + 1);
+        string pass = line.substr(colonPos + 1);
 
         strncpy(users[count].username, uname.c_str(), 49);
-        strncpy(users[count].password, pass.c_str(),  49);
+        strncpy(users[count].password, pass.c_str(), 49);
+
         users[count].username[49] = '\0';
         users[count].password[49] = '\0';
 
@@ -50,13 +57,15 @@ void saveUsers(User users[], int count) {
     ensureDataFolder();
 
     ofstream file("data/users.txt");
+
     if (!file.is_open()) {
         cout << "Error: Could not save users.txt.\n";
         return;
     }
 
     for (int i = 0; i < count; i++) {
-        file << users[i].username << ":" << users[i].password << "\n";
+        file << users[i].username << ":"
+             << users[i].password << "\n";
     }
 
     file.close();
@@ -84,13 +93,17 @@ bool registerUser(User users[], int &count) {
     cin >> pass;
 
     strncpy(users[count].username, uname.c_str(), 49);
-    strncpy(users[count].password, pass.c_str(),  49);
+    strncpy(users[count].password, pass.c_str(), 49);
+
     users[count].username[49] = '\0';
     users[count].password[49] = '\0';
+
     count++;
 
     saveUsers(users, count);
+
     cout << "Account created successfully! You can now log in.\n";
+
     return true;
 }
 
@@ -99,23 +112,29 @@ string loginUser(User users[], int count) {
 
     cout << "Enter username: ";
     cin >> uname;
+
     cout << "Enter password: ";
     cin >> pass;
 
     for (int i = 0; i < count; i++) {
         if (strcmp(users[i].username, uname.c_str()) == 0 &&
-            strcmp(users[i].password, pass.c_str())  == 0) {
-            cout << "Login successful! Welcome, " << uname << "\n";
+            strcmp(users[i].password, pass.c_str()) == 0) {
+
+            cout << "Login successful! Welcome, "
+                 << uname << "\n";
+
             return uname;
         }
     }
 
     cout << "Invalid username or password.\n";
+
     return "";
 }
 
 string runLoginMenu() {
     User users[MAX_USERS];
+
     int count = loadUsers(users, MAX_USERS);
 
     string loggedIn = "";
@@ -132,11 +151,14 @@ string runLoginMenu() {
 
         if (choice == 1) {
             loggedIn = loginUser(users, count);
-        } else if (choice == 2) {
+        }
+        else if (choice == 2) {
             registerUser(users, count);
-        } else if (choice == 3) {
+        }
+        else if (choice == 3) {
             exit(0);
-        } else {
+        }
+        else {
             cout << "Invalid choice. Please try again.\n";
         }
     }

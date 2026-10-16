@@ -1,32 +1,188 @@
-#include<iostream>
+#include <iostream>
+#include <fstream>
+#include <direct.h>
+#include <sys/stat.h>
+#include "login.h"
 #include "commit.h"
-#include "login.cpp"
+#include "staging.h"
+#include "revert.h"
+// #include "shell.h"
+
 using namespace std;
 
+void ensureWorkingDir(string username) {
+    _mkdir("data");
+    _mkdir("data/working");
 
-int main(){
-cout << "MINI VERSION CONTROL SYSTEM" << endl ; 
-int ch ;
-bool islogin = false;
-do{
-    cout << "1. Commit \n 2. Login \n 3.Register \n Enter Your Choice : " << endl;
-    cin >> ch;
-    switch(ch){
-        case 1:
-        break;
-        case 2:
-        islogin = login();
-        break;
-        case 3:
-        registerUser();
-        break;
-        case 4:
-        break;
-        break;
-        default:
-        cout << "Invalid Choice!!" << endl;
-        break;
+    string path = "data/working/" + username;
+    _mkdir(path.c_str());
+}
+
+void writeFileMenu(string username) {
+    cout << "Enter file name: ";
+    string fname;
+    cin >> fname;
+
+    cout << "Enter file content (single line): ";
+    cin.ignore();
+
+    string content;
+    getline(cin, content);
+
+    string path = "data/working/" + username + "/" + fname;
+    ofstream f(path.c_str());
+
+    if (f.is_open()) {
+        f << content;
+        f.close();
+        cout << "File saved successfully: " << path << "\n";
+    } else {
+        cout << "Could not save file.\n";
     }
-}while(1);
-return 0;
+}
+
+void addFileToStaging(StagingArea &staging, string username) {
+    cout << "Enter file name to stage: ";
+    string fname;
+    cin >> fname;
+
+    string path = "data/working/" + username + "/" + fname;
+    ifstream f(path.c_str());
+
+    if (!f.is_open()) {
+        cout << "File not found: " << path << "\n";
+        cout << "Please create the file first using 'Write File'.\n";
+        return;
+    }
+
+    string content = "", line;
+
+    while (getline(f, line)) {
+        content += line + "\n";
+    }
+
+    f.close();
+
+    staging.stageFile(fname, content);
+}
+
+void mainMenu(string username) {
+    ensureWorkingDir(username);
+
+    CommitNode* commitHead = loadCommits();
+    StagingArea staging;
+    string currentBranch = "main";
+
+    cout << "\nWelcome, " << username
+         << "! Current Branch: " << currentBranch << "\n";
+
+    int choice;
+
+    do {
+        cout << "\n========== MiniVCS Menu ==========\n";
+        cout << "1.  Write File (in working directory)\n";
+        cout << "2.  Add File to Staging (git add)\n";
+        cout << "3.  View Staging Area\n";
+        cout << "4.  Unstage Last File\n";
+        cout << "5.  Commit Staged Files\n";
+        cout << "6.  View Commit History\n";
+        cout << "7.  View Commit Details & File Changes\n";
+        cout << "8.  Move to Specific Commit\n";
+        cout << "9.  Undo Last Commit\n";
+        cout << "10. Revert to Specific Commit\n";
+        // cout << "11. Run Shell environment\n";
+        cout << "0.  Logout\n";
+        cout << "==================================\n";
+        cout << "Choice: ";
+
+        cin >> choice;
+
+        switch (choice) {
+            case 1:
+                writeFileMenu(username);
+                break;
+
+            case 2:
+                addFileToStaging(staging, username);
+                break;
+
+            case 3:
+                staging.viewStaging();
+                break;
+
+            case 4:
+                staging.unstageLastFile();
+                break;
+
+            case 5:
+                commitHead = staging.commitAll(
+                    commitHead, username, currentBranch
+                );
+                break;
+
+            case 6:
+                showHistory(commitHead);
+                break;
+
+            case 7: {
+                cout << "Enter commit ID to inspect: ";
+                string commitId;
+                cin >> commitId;
+
+                viewCommitChanges(commitHead, commitId, username);
+                break;
+            }
+
+            case 8: {
+                cout << "Enter commit ID to checkout / move to: ";
+                string commitId;
+                cin >> commitId;
+
+                checkoutCommit(commitHead, commitId, username);
+                break;
+            }
+
+            case 9:
+                commitHead = undoLastCommit(commitHead, username);
+                break;
+
+            case 10: {
+                cout << "Enter commit ID to revert to: ";
+                string targetId;
+                cin >> targetId;
+
+                commitHead = revertToCommit(
+                    commitHead, targetId, username
+                );
+                break;
+            }
+
+            // case 11:
+            //     startShell(staging);
+            //     break;
+
+            case 0:
+                cout << "Logged out successfully. Goodbye, "
+                     << username << "!\n";
+                break;
+
+            default:
+                cout << "Invalid choice. Please try again.\n";
+        }
+
+    } while (choice != 0);
+
+    freeCommits(commitHead);
+}
+
+int main() {
+    cout << "=============================\n";
+    cout << "   MiniVCS - Version Control \n";
+    cout << "           System            \n";
+    cout << "=============================\n";
+
+    string username = runLoginMenu();
+    mainMenu(username);
+
+    return 0;
 }
