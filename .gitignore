@@ -1,0 +1,13 @@
+# Binaries & build artifacts
+server
+minivcs
+a.out
+*.o
+*.dSYM
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
