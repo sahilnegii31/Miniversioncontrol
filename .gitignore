@@ -1,5 +1,10 @@
+minivcs.exe
 minivcs
 minivcs_single
 *.o
+*.exe
 *.dSYM
 .DS_Store
+frontend/node_modules/
+frontend/dist/
+data/
