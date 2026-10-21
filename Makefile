@@ -1,7 +1,7 @@
 CXX = clang++
 CXXFLAGS = -std=c++17 -Wall -O2
 
-COMMON_SRCS = commit.cpp staging.cpp revert.cpp login.cpp
+COMMON_SRCS = commit.cpp staging.cpp revert.cpp login.cpp branch.cpp
 SERVER_SRCS = $(COMMON_SRCS) contribution.cpp c_chart.cpp server.cpp
 CLI_SRCS = main.cpp $(COMMON_SRCS)
 

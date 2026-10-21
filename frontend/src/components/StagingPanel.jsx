@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layers, GitCommit, Undo, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function StagingPanel({
@@ -6,12 +6,18 @@ export default function StagingPanel({
   onUnstage,
   onClearStaging,
   onCommit,
-  currentBranch
+  currentBranch = 'main'
 }) {
   const [commitMsg, setCommitMsg] = useState('');
   const [branch, setBranch] = useState(currentBranch || 'main');
   const [isCommitting, setIsCommitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (currentBranch) {
+      setBranch(currentBranch);
+    }
+  }, [currentBranch]);
 
   const handleCommitSubmit = async (e) => {
     e.preventDefault();

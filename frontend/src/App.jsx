@@ -5,12 +5,15 @@ import InsightsPage from './components/InsightsPage';
 import WorkingDirExplorer from './components/WorkingDirExplorer';
 import StagingPanel from './components/StagingPanel';
 import CommitHistory from './components/CommitHistory';
+import BranchesPage from './components/BranchesPage';
 import './App.css';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState('code'); // 'code' or 'insights'
+  const [currentTab, setCurrentTab] = useState('code'); // 'code', 'branches', or 'insights'
   const [currentUser, setCurrentUser] = useState('sahil');
   const [users, setUsers] = useState([{ username: 'sahil' }, { username: 'vanshika' }]);
+  const [currentBranch, setCurrentBranch] = useState('main');
+  const [branches, setBranches] = useState([]);
   const [files, setFiles] = useState([]);
   const [stagedFiles, setStagedFiles] = useState([]);
   const [commits, setCommits] = useState([]);
@@ -23,6 +26,20 @@ export default function App() {
     setToast(msg);
     setTimeout(() => setToast(''), 4000);
   };
+
+  // Load branches
+  const loadBranches = useCallback(async (user) => {
+    try {
+      const data = await api.getBranches(user);
+      setBranches(data || []);
+      const active = (data || []).find((b) => b.isActive);
+      if (active) {
+        setCurrentBranch(active.name);
+      }
+    } catch (err) {
+      console.error('Failed to load branches:', err);
+    }
+  }, []);
 
   // Load contributions in real-time
   const loadContributions = useCallback(async (authorFilter = '') => {
@@ -79,12 +96,13 @@ export default function App() {
         loadFiles(currentUser),
         loadStaging(currentUser),
         loadCommits(),
+        loadBranches(currentUser),
         loadContributions(selectedAuthor)
       ]);
     } catch {
       setBackendConnected(false);
     }
-  }, [currentUser, selectedAuthor, loadFiles, loadStaging, loadCommits, loadContributions]);
+  }, [currentUser, selectedAuthor, loadFiles, loadStaging, loadCommits, loadBranches, loadContributions]);
 
   useEffect(() => {
     loadAll();
@@ -100,6 +118,7 @@ export default function App() {
     setCurrentUser(newUname);
     loadFiles(newUname);
     loadStaging(newUname);
+    loadBranches(newUname);
     showToast(`Switched active user to ${newUname}`);
   };
 
@@ -149,15 +168,68 @@ export default function App() {
   const handleCommit = async (message, branch) => {
     const res = await api.createCommit(currentUser, message, branch);
     if (res.success) {
-      showToast(`🎉 Commit ${res.commitId} created! Insights histogram updated.`);
-      // Update staging, commits and contribution metrics in real time!
+      showToast(`🎉 Commit ${res.commitId} created! Insights & branch updated.`);
+      // Update staging, commits, branches and contribution metrics in real time!
       await Promise.all([
         loadStaging(currentUser),
         loadCommits(),
+        loadBranches(currentUser),
         loadContributions(selectedAuthor)
       ]);
     } else {
       throw new Error(res.error || 'Failed to commit');
+    }
+  };
+
+  // Branch Operations
+  const handleSwitchBranch = async (targetBranch) => {
+    try {
+      const res = await api.switchBranch(targetBranch, currentUser);
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to switch branch');
+      }
+      setCurrentBranch(targetBranch);
+      showToast(`Switched active branch to "${targetBranch}"`);
+      await Promise.all([
+        loadFiles(currentUser),
+        loadStaging(currentUser),
+        loadBranches(currentUser),
+        loadContributions(selectedAuthor)
+      ]);
+    } catch (err) {
+      showToast(`Error switching branch: ${err.message}`);
+    }
+  };
+
+  const handleCreateBranch = async (branchName, fromBranch, switchNow = true) => {
+    try {
+      const res = await api.createBranch(branchName, fromBranch, currentUser);
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to create branch');
+      }
+      showToast(`🎉 Branch "${branchName}" created from "${fromBranch}"!`);
+      if (switchNow) {
+        await handleSwitchBranch(branchName);
+      } else {
+        await loadBranches(currentUser);
+      }
+    } catch (err) {
+      showToast(`Error creating branch: ${err.message}`);
+      throw err;
+    }
+  };
+
+  const handleDeleteBranch = async (branchName) => {
+    try {
+      const res = await api.deleteBranch(branchName);
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to delete branch');
+      }
+      showToast(`Deleted branch "${branchName}"`);
+      await loadBranches(currentUser);
+    } catch (err) {
+      showToast(`Error deleting branch: ${err.message}`);
+      throw err;
     }
   };
 
@@ -178,6 +250,7 @@ export default function App() {
       await Promise.all([
         loadCommits(),
         loadFiles(currentUser),
+        loadBranches(currentUser),
         loadContributions(selectedAuthor)
       ]);
       showToast('Undid last commit');
@@ -192,6 +265,7 @@ export default function App() {
       await Promise.all([
         loadCommits(),
         loadFiles(currentUser),
+        loadBranches(currentUser),
         loadContributions(selectedAuthor)
       ]);
       showToast(`Reverted back to commit ${targetId}`);
@@ -202,13 +276,16 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      {/* Top Navigation Bar with Code & Insights Tabs */}
+      {/* Top Navigation Bar with Code, Branches & Insights Tabs */}
       <Navbar
         currentUser={currentUser}
         users={users}
         onSwitchUser={handleSwitchUser}
         currentTab={currentTab}
         onTabChange={setCurrentTab}
+        branches={branches}
+        currentBranch={currentBranch}
+        onSwitchBranch={handleSwitchBranch}
         onLogin={async (u, p) => {
           const res = await api.login(u, p);
           if (res.success) {
@@ -241,6 +318,7 @@ export default function App() {
             <div className="split-grid mb-6">
               <WorkingDirExplorer
                 user={currentUser}
+                currentBranch={currentBranch}
                 files={files}
                 onRefresh={() => loadFiles(currentUser)}
                 onStageFile={handleStageFile}
@@ -253,7 +331,7 @@ export default function App() {
                 onUnstage={handleUnstage}
                 onClearStaging={handleClearStaging}
                 onCommit={handleCommit}
-                currentBranch="main"
+                currentBranch={currentBranch}
               />
             </div>
 
@@ -269,7 +347,22 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= VIEW 2: INSIGHTS TAB (Pulse, Commits, Contributors) ================= */}
+        {/* ================= VIEW 2: BRANCHES TAB ================= */}
+        {currentTab === 'branches' && (
+          <div className="tab-fade-in">
+            <BranchesPage
+              branches={branches}
+              currentBranch={currentBranch}
+              currentUser={currentUser}
+              onSwitchBranch={handleSwitchBranch}
+              onCreateBranch={handleCreateBranch}
+              onDeleteBranch={handleDeleteBranch}
+              onRefresh={() => loadBranches(currentUser)}
+            />
+          </div>
+        )}
+
+        {/* ================= VIEW 3: INSIGHTS TAB (Pulse, Commits, Contributors) ================= */}
         {currentTab === 'insights' && (
           <div className="tab-fade-in">
             <InsightsPage

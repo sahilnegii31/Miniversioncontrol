@@ -20,6 +20,7 @@
 #include "revert.h"
 #include "login.h"
 #include "contribution.h"
+#include "branch.h"
 
 using namespace std;
 
@@ -144,6 +145,9 @@ static void sendHttpResponse(int clientSock, int statusCode, const string& statu
     oss << "Access-Control-Allow-Origin: *\r\n";
     oss << "Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\n";
     oss << "Access-Control-Allow-Headers: Content-Type, Authorization\r\n";
+    oss << "Cache-Control: no-cache, no-store, must-revalidate\r\n";
+    oss << "Pragma: no-cache\r\n";
+    oss << "Expires: 0\r\n";
     oss << "Connection: close\r\n";
     oss << "\r\n";
     oss << body;
@@ -306,6 +310,9 @@ static void handleClient(int clientSock) {
         if (user.empty()) user = "sahil";
         ensureUserDir(user);
 
+        string activeBranch = getUserCurrentBranch(user);
+        syncWorkingWithBranch(user, activeBranch);
+
         string userDir = "data/working/" + user;
         DIR* dir = opendir(userDir.c_str());
         ostringstream oss;
@@ -341,6 +348,9 @@ static void handleClient(int clientSock) {
         string fname = getQueryParam(path, "name");
         if (user.empty()) user = "sahil";
 
+        string activeBranch = getUserCurrentBranch(user);
+        syncWorkingWithBranch(user, activeBranch);
+
         string filePath = "data/working/" + user + "/" + fname;
         ifstream f(filePath.c_str());
         if (!f.is_open()) {
@@ -375,6 +385,16 @@ static void handleClient(int clientSock) {
             if (out.is_open()) {
                 out << content;
                 out.close();
+
+                string activeBranch = getUserCurrentBranch(user);
+                ensureBranchDir(activeBranch);
+                string branchFilePath = "data/branches/" + activeBranch + "/" + fname;
+                ofstream bOut(branchFilePath.c_str());
+                if (bOut.is_open()) {
+                    bOut << content;
+                    bOut.close();
+                }
+
                 sendHttpResponse(clientSock, 200, "OK", "application/json",
                                  "{\"success\": true, \"name\": \"" + jsonEscape(fname) + "\"}");
             } else {
@@ -391,6 +411,11 @@ static void handleClient(int clientSock) {
 
         string filePath = "data/working/" + user + "/" + fname;
         remove(filePath.c_str());
+
+        string activeBranch = getUserCurrentBranch(user);
+        string branchFilePath = "data/branches/" + activeBranch + "/" + fname;
+        remove(branchFilePath.c_str());
+
         sendHttpResponse(clientSock, 200, "OK", "application/json",
                          "{\"success\": true}");
     }
@@ -416,6 +441,9 @@ static void handleClient(int clientSock) {
         string user  = extractJsonField(reqBody, "user");
         string fname = extractJsonField(reqBody, "filename");
         if (user.empty()) user = "sahil";
+
+        string activeBranch = getUserCurrentBranch(user);
+        syncWorkingWithBranch(user, activeBranch);
 
         string filePath = "data/working/" + user + "/" + fname;
         ifstream f(filePath.c_str());
@@ -459,9 +487,10 @@ static void handleClient(int clientSock) {
         string branch  = extractJsonField(reqBody, "branch");
 
         if (user.empty()) user = "sahil";
-        if (branch.empty()) branch = "main";
+        if (branch.empty()) branch = getUserCurrentBranch(user);
         if (message.empty()) message = "Commit from Web GUI";
 
+        syncWorkingWithBranch(user, branch);
         syncCommitsFromDisk();
 
         if (userStagingMap[user].isEmpty()) {
@@ -616,6 +645,130 @@ static void handleClient(int clientSock) {
         string svg = generateContributorSvg(summary);
         sendHttpResponse(clientSock, 200, "OK", "image/svg+xml", svg);
     }
+    // Endpoint: /api/branches (List all branches with file info)
+    else if (basePath == "/api/branches" && method == "GET") {
+        string user = getQueryParam(path, "user");
+        if (user.empty()) user = "sahil";
+
+        syncCommitsFromDisk();
+        string activeBranch = getUserCurrentBranch(user);
+        syncWorkingWithBranch(user, activeBranch);
+        vector<BranchDetail> branches = getAllBranchesDetailed(globalCommitHead);
+
+        ostringstream oss;
+        oss << "[\n";
+        for (size_t i = 0; i < branches.size(); i++) {
+            const auto& b = branches[i];
+            oss << "  {\n";
+            oss << "    \"name\": \"" << jsonEscape(b.name) << "\",\n";
+            oss << "    \"parentBranch\": \"" << jsonEscape(b.parentBranch) << "\",\n";
+            oss << "    \"isCurrent\": " << (b.name == activeBranch ? "true" : "false") << ",\n";
+            oss << "    \"latestCommitId\": \"" << jsonEscape(b.latestCommitId) << "\",\n";
+            oss << "    \"latestCommitMsg\": \"" << jsonEscape(b.latestCommitMsg) << "\",\n";
+            oss << "    \"lastUpdated\": \"" << jsonEscape(b.lastUpdated) << "\",\n";
+            oss << "    \"fileCount\": " << b.fileCount << ",\n";
+            oss << "    \"files\": [\n";
+            for (size_t j = 0; j < b.files.size(); j++) {
+                oss << "      \"" << jsonEscape(b.files[j]) << "\"" << (j + 1 < b.files.size() ? "," : "") << "\n";
+            }
+            oss << "    ]\n";
+            oss << "  }" << (i + 1 < branches.size() ? "," : "") << "\n";
+        }
+        oss << "]";
+        sendHttpResponse(clientSock, 200, "OK", "application/json", oss.str());
+    }
+    // Endpoint: /api/branch (POST create new branch)
+    else if (basePath == "/api/branch" && method == "POST") {
+        string name = extractJsonField(reqBody, "name");
+        string from = extractJsonField(reqBody, "from");
+        string user = extractJsonField(reqBody, "user");
+
+        if (user.empty()) user = "sahil";
+        if (from.empty()) from = getUserCurrentBranch(user);
+
+        if (name.empty()) {
+            sendHttpResponse(clientSock, 400, "Bad Request", "application/json",
+                             "{\"success\": false, \"error\": \"Branch name cannot be empty\"}");
+        } else {
+            bool ok = createBranch(name, from, user);
+            if (ok) {
+                sendHttpResponse(clientSock, 200, "OK", "application/json",
+                                 "{\"success\": true, \"name\": \"" + jsonEscape(name) +
+                                 "\", \"message\": \"Branch '" + jsonEscape(name) + "' created successfully!\"}");
+            } else {
+                sendHttpResponse(clientSock, 400, "Bad Request", "application/json",
+                                 "{\"success\": false, \"error\": \"Could not create branch. Invalid name or directory error.\"}");
+            }
+        }
+    }
+    // Endpoint: /api/branch/switch (POST checkout/switch branch)
+    else if (basePath == "/api/branch/switch" && method == "POST") {
+        string branch = extractJsonField(reqBody, "branch");
+        string user   = extractJsonField(reqBody, "user");
+
+        if (user.empty()) user = "sahil";
+        if (branch.empty()) branch = "main";
+
+        bool ok = switchBranch(user, branch);
+        if (ok) {
+            sendHttpResponse(clientSock, 200, "OK", "application/json",
+                             "{\"success\": true, \"currentBranch\": \"" + jsonEscape(branch) +
+                             "\", \"message\": \"Switched to branch " + jsonEscape(branch) + "\"}");
+        } else {
+            sendHttpResponse(clientSock, 400, "Bad Request", "application/json",
+                             "{\"success\": false, \"error\": \"Failed to switch branch.\"}");
+        }
+    }
+    // Endpoint: /api/branch/files (GET files inside a branch folder)
+    else if (basePath == "/api/branch/files" && method == "GET") {
+        string branch = getQueryParam(path, "branch");
+        if (branch.empty()) branch = "main";
+
+        vector<string> files = getBranchFiles(branch);
+        string branchDir = "data/branches/" + branch;
+
+        ostringstream oss;
+        oss << "[\n";
+        for (size_t i = 0; i < files.size(); i++) {
+            string filePath = branchDir + "/" + files[i];
+            struct stat st;
+            long size = 0;
+            if (stat(filePath.c_str(), &st) == 0) {
+                size = st.st_size;
+            }
+            oss << "  {\"name\": \"" << jsonEscape(files[i]) << "\", \"size\": " << size << "}";
+            if (i + 1 < files.size()) oss << ",";
+            oss << "\n";
+        }
+        oss << "]";
+        sendHttpResponse(clientSock, 200, "OK", "application/json", oss.str());
+    }
+    // Endpoint: /api/branch/file (GET content of a file in a branch)
+    else if (basePath == "/api/branch/file" && method == "GET") {
+        string branch = getQueryParam(path, "branch");
+        string fname  = getQueryParam(path, "name");
+        if (branch.empty()) branch = "main";
+
+        string content = readBranchFileContent(branch, fname);
+        ostringstream oss;
+        oss << "{\"name\": \"" << jsonEscape(fname)
+            << "\", \"branch\": \"" << jsonEscape(branch)
+            << "\", \"content\": \"" << jsonEscape(content) << "\"}";
+        sendHttpResponse(clientSock, 200, "OK", "application/json", oss.str());
+    }
+    // Endpoint: /api/branch (DELETE remove a branch)
+    else if (basePath == "/api/branch" && method == "DELETE") {
+        string branch = getQueryParam(path, "name");
+        string errorMsg = "";
+        bool ok = removeBranch(branch, errorMsg);
+        if (ok) {
+            sendHttpResponse(clientSock, 200, "OK", "application/json",
+                             "{\"success\": true, \"message\": \"Branch deleted successfully\"}");
+        } else {
+            sendHttpResponse(clientSock, 400, "Bad Request", "application/json",
+                             "{\"success\": false, \"error\": \"" + jsonEscape(errorMsg) + "\"}");
+        }
+    }
     // Serve Static React Frontend assets
     else if (method == "GET" && basePath.rfind("/api", 0) != 0) {
         string filePath = "frontend/dist" + basePath;
@@ -667,8 +820,9 @@ int main(int argc, char* argv[]) {
         port = atoi(argv[1]);
     }
 
-    // Load initial commit history
+    // Load initial commit history and branch system
     globalCommitHead = loadCommits();
+    initBranchSystem(globalCommitHead);
     cout << "========================================\n";
     cout << "  MiniVCS C++ REST API Server Started   \n";
     cout << "========================================\n";

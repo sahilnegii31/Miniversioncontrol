@@ -3,12 +3,23 @@
 #include <iostream>
 #include <fstream>
 #include <ctime>
-#include <cstring>
-#include <sstream>
 #include <dirent.h>
 #include <sys/stat.h>
+
 using namespace std;
 
+// Helper to read entire file content as string
+static string readFileContent(string path) {
+    ifstream f(path.c_str());
+    if (!f.is_open()) return "";
+    string content = "", line;
+    while (getline(f, line)) {
+        content += line + "\n";
+    }
+    return content;
+}
+
+// Get current date and time as a formatted string
 string getCurrentTime() {
     time_t now = time(nullptr);
     char buf[64];
@@ -16,27 +27,28 @@ string getCurrentTime() {
     return string(buf);
 }
 
+// Generate sequential commit ID (C001, C002, ...)
 string generateCommitId(CommitNode* head) {
     int maxNum = 0;
-
     CommitNode* curr = head;
+
     while (curr != nullptr) {
         string idStr = curr->commitId.substr(1);
         int num = 0;
-        for (int i = 0; i < (int)idStr.size(); i++) {
-            num = num * 10 + (idStr[i] - '0');
+        for (char c : idStr) {
+            num = num * 10 + (c - '0');
         }
         if (num > maxNum) maxNum = num;
         curr = curr->next;
     }
 
     maxNum++;
-
     char buf[10];
     snprintf(buf, sizeof(buf), "C%03d", maxNum);
     return string(buf);
 }
 
+// Append a new commit node to the end of the linked list
 CommitNode* addCommit(CommitNode* head, string author, string message, string branch) {
     CommitNode* newNode = new CommitNode();
     newNode->commitId  = generateCommitId(head);
@@ -47,30 +59,29 @@ CommitNode* addCommit(CommitNode* head, string author, string message, string br
 
     if (head == nullptr) {
         newNode->parentId = "NONE";
-    } else {
-        CommitNode* curr = head;
-        while (curr->next != nullptr) curr = curr->next;
-        newNode->parentId = curr->commitId;
-    }
-
-    if (head == nullptr) {
         return newNode;
     }
 
+    // Traverse to the last node to set parent and link
     CommitNode* curr = head;
-    while (curr->next != nullptr) curr = curr->next;
+    while (curr->next != nullptr) {
+        curr = curr->next;
+    }
+
+    newNode->parentId = curr->commitId;
     curr->next = newNode;
     return head;
 }
 
+// Load commits from data/commits.txt into a linked list
 CommitNode* loadCommits() {
     ifstream file("data/commits.txt");
     if (!file.is_open()) return nullptr;
 
     CommitNode* head = nullptr;
     CommitNode* tail = nullptr;
-
     string line;
+
     while (getline(file, line)) {
         if (line.empty()) continue;
 
@@ -78,8 +89,8 @@ CommitNode* loadCommits() {
         int partIndex = 0;
         string temp = "";
 
-        for (int i = 0; i <= (int)line.size(); i++) {
-            if (i == (int)line.size() || line[i] == '|') {
+        for (size_t i = 0; i <= line.size(); i++) {
+            if (i == line.size() || line[i] == '|') {
                 if (partIndex < 6) parts[partIndex++] = temp;
                 temp = "";
             } else {
@@ -110,6 +121,7 @@ CommitNode* loadCommits() {
     return head;
 }
 
+// Save the commit linked list to data/commits.txt
 void saveCommits(CommitNode* head) {
     mkdir("data", 0755);
 
@@ -133,6 +145,7 @@ void saveCommits(CommitNode* head) {
     file.close();
 }
 
+// Print full commit history (git log)
 void showHistory(CommitNode* head) {
     if (head == nullptr) {
         cout << "No commits found yet.\n";
@@ -153,6 +166,7 @@ void showHistory(CommitNode* head) {
     }
 }
 
+// Find a commit by its commit ID in the linked list
 CommitNode* findCommit(CommitNode* head, string commitId) {
     CommitNode* curr = head;
     while (curr != nullptr) {
@@ -162,6 +176,7 @@ CommitNode* findCommit(CommitNode* head, string commitId) {
     return nullptr;
 }
 
+// Inspect changes introduced in a commit compared to its parent
 void viewCommitChanges(CommitNode* head, string commitId, string currentUser) {
     CommitNode* curr = findCommit(head, commitId);
     if (curr == nullptr) {
@@ -186,7 +201,6 @@ void viewCommitChanges(CommitNode* head, string commitId, string currentUser) {
     }
 
     cout << "\n--- Files in Commit " << commitId << " ---\n";
-
     bool foundFiles = false;
     struct dirent* entry;
 
@@ -195,65 +209,37 @@ void viewCommitChanges(CommitNode* head, string commitId, string currentUser) {
         if (fname == "." || fname == "..") continue;
 
         foundFiles = true;
-        string currentFilePath = currentDir + "/" + fname;
-        string currentContent = "";
-        ifstream curFile(currentFilePath.c_str());
-        if (curFile.is_open()) {
-            string line;
-            while (getline(curFile, line)) {
-                currentContent += line + "\n";
-            }
-            curFile.close();
-        }
+        string currentContent = readFileContent(currentDir + "/" + fname);
 
         cout << "\nFile: " << fname << "\n";
 
         if (curr->parentId == "NONE") {
             cout << "Status: [INITIAL COMMIT] Newly created file.\n";
-            cout << "Content:\n";
-            cout << "----------------------------------------\n";
-            cout << currentContent;
-            cout << "----------------------------------------\n";
+            cout << "Content:\n" << currentContent;
         } else {
-            string parentFilePath = "data/objects/" + curr->parentId + "/" + fname;
-            ifstream parFile(parentFilePath.c_str());
+            string parentPath = "data/objects/" + curr->parentId + "/" + fname;
+            ifstream parTest(parentPath.c_str());
 
-            if (!parFile.is_open()) {
+            if (!parTest.is_open()) {
                 cout << "Status: [ADDED] File was added in this commit.\n";
-                cout << "Content:\n";
-                cout << "----------------------------------------\n";
-                cout << currentContent;
-                cout << "----------------------------------------\n";
+                cout << "Content:\n" << currentContent;
             } else {
-                string parentContent = "";
-                string line;
-                while (getline(parFile, line)) {
-                    parentContent += line + "\n";
-                }
-                parFile.close();
+                parTest.close();
+                string parentContent = readFileContent(parentPath);
 
                 if (currentContent == parentContent) {
-                    cout << "Status: [UNCHANGED] Identical to parent commit (" << curr->parentId << ").\n";
-                    cout << "Content:\n";
-                    cout << "----------------------------------------\n";
-                    cout << currentContent;
-                    cout << "----------------------------------------\n";
+                    cout << "Status: [UNCHANGED] Identical to parent (" << curr->parentId << ").\n";
                 } else {
-                    cout << "Status: [MODIFIED] File changed from parent commit (" << curr->parentId << ").\n";
-                    cout << "\nPrevious Content (" << curr->parentId << "):\n";
-                    cout << "----------------------------------------\n";
-                    cout << parentContent;
-                    cout << "----------------------------------------\n";
-                    cout << "Current Content (" << commitId << "):\n";
-                    cout << "----------------------------------------\n";
-                    cout << currentContent;
-                    cout << "----------------------------------------\n";
+                    cout << "Status: [MODIFIED] File changed from parent (" << curr->parentId << ").\n";
+                    cout << "Previous Content:\n" << parentContent;
+                    cout << "Current Content:\n"  << currentContent;
                 }
             }
         }
     }
     closedir(dir);
 
+    // Check for deleted files
     if (curr->parentId != "NONE") {
         string parentDir = "data/objects/" + curr->parentId;
         DIR* pDir = opendir(parentDir.c_str());
@@ -267,7 +253,7 @@ void viewCommitChanges(CommitNode* head, string commitId, string currentUser) {
                 ifstream checkFile(checkPath.c_str());
                 if (!checkFile.is_open()) {
                     cout << "\nFile: " << pFname << "\n";
-                    cout << "Status: [DELETED] Existed in parent (" << curr->parentId << ") but removed in this commit.\n";
+                    cout << "Status: [DELETED] Removed in this commit.\n";
                 } else {
                     checkFile.close();
                 }
@@ -289,6 +275,7 @@ void viewCommitChanges(CommitNode* head, string commitId, string currentUser) {
     }
 }
 
+// Free all nodes in the commit linked list
 void freeCommits(CommitNode* head) {
     while (head != nullptr) {
         CommitNode* temp = head;

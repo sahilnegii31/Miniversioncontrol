@@ -1,13 +1,11 @@
 #include "staging.h"
+#include "branch.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <sys/stat.h>
-using namespace std;
 
-static void makeDir(string path) {
-    mkdir(path.c_str(), 0755);
-}
+using namespace std;
 
 void StagingArea::stageFile(string filename, string content) {
     Stack<StagedFile> tempStack;
@@ -28,37 +26,31 @@ void StagingArea::stageFile(string filename, string content) {
 
     if (!found) {
         stagingStack.push(StagedFile(filename, content));
-        cout << "File staged: " << filename << "\n";
-    } else {
-        cout << "File updated in staging: " << filename << "\n";
     }
 }
 
 void StagingArea::unstageLastFile() {
     if (stagingStack.isEmpty()) {
-        cout << "Staging area is empty. Nothing to remove.\n";
+        cout << "Staging area is empty.\n";
         return;
     }
-
     StagedFile removed = stagingStack.pop();
     cout << "Unstaged: " << removed.filename << "\n";
 }
 
 void StagingArea::viewStaging() {
     if (stagingStack.isEmpty()) {
-        cout << "No files in staging area.\n";
+        cout << "Staging area is empty.\n";
         return;
     }
 
     cout << "\n===== Staged Files =====\n";
-
     Stack<StagedFile> tempStack;
     int i = 1;
 
     while (!stagingStack.isEmpty()) {
         StagedFile f = stagingStack.pop();
-        cout << i++ << ". " << f.filename << "\n";
-        cout << "   Content: " << f.content << "\n";
+        cout << i++ << ". " << f.filename << " (" << f.content.size() << " bytes)\n";
         tempStack.push(f);
     }
 
@@ -72,6 +64,8 @@ CommitNode* StagingArea::commitAllWithMessage(CommitNode* head, string author, s
         return head;
     }
 
+    syncWorkingWithBranch(author, branch);
+
     head = addCommit(head, author, commitMsg, branch);
 
     CommitNode* curr = head;
@@ -83,6 +77,11 @@ CommitNode* StagingArea::commitAllWithMessage(CommitNode* head, string author, s
     string snapshotDir = "data/objects/" + newId;
     makeDir(snapshotDir);
 
+    string branchDir = "data/branches/" + branch;
+    if (dirExists(branchDir)) {
+        copyDirectory(branchDir, snapshotDir);
+    }
+
     int fileCount = 0;
     while (!stagingStack.isEmpty()) {
         StagedFile f = stagingStack.pop();
@@ -92,25 +91,26 @@ CommitNode* StagingArea::commitAllWithMessage(CommitNode* head, string author, s
         if (out.is_open()) {
             out << f.content;
             out.close();
-            cout << "  Saved: " << f.filename << " -> " << filePath << "\n";
             fileCount++;
-        } else {
-            cout << "  Warning: Could not save " << f.filename << ".\n";
         }
     }
 
     saveCommits(head);
 
-    cout << "\nCommit successful!\n";
-    cout << "Commit ID : " << newId << "\n";
-    cout << "Files saved: " << fileCount << "\n";
+    syncBranchWithCommit(branch, newId);
 
+    string workDir = "data/working/" + author;
+    if (dirExists(workDir) && getUserCurrentBranch(author) == branch) {
+        copyDirectory(snapshotDir, workDir);
+    }
+
+    cout << "Commit " << newId << " created on branch '" << branch << "' (" << fileCount << " files modified).\n";
     return head;
 }
 
 CommitNode* StagingArea::commitAll(CommitNode* head, string author, string branch) {
     if (stagingStack.isEmpty()) {
-        cout << "No staged files. Please stage files first using 'add'.\n";
+        cout << "No staged files. Stage files first using 'git add'.\n";
         return head;
     }
 

@@ -35,12 +35,16 @@ export const api = {
 
   // Working Directory Files
   async getFiles(user) {
-    const res = await fetch(`${API_BASE}/api/files?user=${encodeURIComponent(user)}`);
+    const res = await fetch(`${API_BASE}/api/files?user=${encodeURIComponent(user)}&_t=${Date.now()}`, {
+      cache: 'no-store'
+    });
     return res.json();
   },
 
   async getFileContent(user, filename) {
-    const res = await fetch(`${API_BASE}/api/file?user=${encodeURIComponent(user)}&name=${encodeURIComponent(filename)}`);
+    const res = await fetch(`${API_BASE}/api/file?user=${encodeURIComponent(user)}&name=${encodeURIComponent(filename)}&_t=${Date.now()}`, {
+      cache: 'no-store'
+    });
     return res.json();
   },
 
@@ -148,6 +152,53 @@ export const api = {
 
   getContributionSvgUrl(user = '') {
     return `${API_BASE}/api/contributions/svg?user=${encodeURIComponent(user)}&t=${Date.now()}`;
+  },
+
+  // Branches
+  async getBranches(user = 'sahil') {
+    const res = await fetch(`${API_BASE}/api/branches?user=${encodeURIComponent(user)}&_t=${Date.now()}`, {
+      cache: 'no-store'
+    });
+    return res.json();
+  },
+
+  async createBranch(name, from = 'main', user = 'sahil') {
+    const res = await fetch(`${API_BASE}/api/branch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, from, user })
+    });
+    return res.json();
+  },
+
+  async switchBranch(branch, user = 'sahil') {
+    const res = await fetch(`${API_BASE}/api/branch/switch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ branch, user })
+    });
+    return res.json();
+  },
+
+  async getBranchFiles(branch) {
+    const res = await fetch(`${API_BASE}/api/branch/files?branch=${encodeURIComponent(branch)}&_t=${Date.now()}`, {
+      cache: 'no-store'
+    });
+    return res.json();
+  },
+
+  async getBranchFileContent(branch, filename) {
+    const res = await fetch(`${API_BASE}/api/branch/file?branch=${encodeURIComponent(branch)}&name=${encodeURIComponent(filename)}&_t=${Date.now()}`, {
+      cache: 'no-store'
+    });
+    return res.json();
+  },
+
+  async deleteBranch(name) {
+    const res = await fetch(`${API_BASE}/api/branch?name=${encodeURIComponent(name)}`, {
+      method: 'DELETE'
+    });
+    return res.json();
   }
 };
 

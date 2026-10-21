@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Folder, FileText, Plus, Save, Trash2, ArrowRightCircle, RefreshCw } from 'lucide-react';
+import { Folder, FileText, Plus, Save, Trash2, ArrowRightCircle, RefreshCw, GitBranch } from 'lucide-react';
 
 export default function WorkingDirExplorer({
   user,
+  currentBranch = 'main',
   files,
   onRefresh,
   onStageFile,
@@ -62,7 +63,10 @@ export default function WorkingDirExplorer({
         <div className="flex-center gap-2">
           <Folder size={18} className="text-blue-400" />
           <h3 className="panel-title">Working Directory</h3>
-          <span className="user-badge">data/working/{user}</span>
+          <span className="user-badge font-mono">data/working/{user}</span>
+          <span className="user-badge font-mono text-purple-300 bg-purple-500/10 border border-purple-500/30 flex items-center gap-1">
+            <GitBranch size={12} /> {currentBranch}
+          </span>
         </div>
         <div className="flex-center gap-2">
           <button onClick={() => setShowNewModal(true)} className="btn-sm btn-outline">

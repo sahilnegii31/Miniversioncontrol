@@ -9,7 +9,10 @@ export default function Navbar({
   onRegister,
   backendConnected,
   currentTab = 'code',
-  onTabChange
+  onTabChange,
+  branches = [],
+  currentBranch = 'main',
+  onSwitchBranch
 }) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
@@ -66,6 +69,17 @@ export default function Navbar({
           <Code size={16} /> Code
         </button>
         <button
+          onClick={() => onTabChange && onTabChange('branches')}
+          className={`nav-tab-btn ${currentTab === 'branches' ? 'active' : ''}`}
+        >
+          <GitBranch size={16} /> Branches
+          {branches && branches.length > 0 && (
+            <span className="ml-1.5 px-1.5 py-0.2 bg-purple-500/20 text-purple-300 text-[10px] rounded-full font-mono">
+              {branches.length}
+            </span>
+          )}
+        </button>
+        <button
           onClick={() => onTabChange && onTabChange('insights')}
           className={`nav-tab-btn ${currentTab === 'insights' ? 'active' : ''}`}
         >
@@ -74,6 +88,23 @@ export default function Navbar({
       </nav>
 
       <div className="nav-right">
+        {/* Quick Branch Switcher Dropdown */}
+        <div className="branch-nav-dropdown flex items-center gap-1.5 bg-[#161b22] border border-[#30363d] px-2.5 py-1 rounded-md">
+          <GitBranch size={14} className="text-purple-400" />
+          <select
+            value={currentBranch}
+            onChange={(e) => onSwitchBranch && onSwitchBranch(e.target.value)}
+            className="bg-transparent text-xs text-gray-200 font-mono outline-none cursor-pointer border-0"
+            title="Active checked-out branch"
+          >
+            {branches && branches.map((b) => (
+              <option key={b.name} value={b.name} className="bg-[#161b22] text-gray-200">
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Quick User Switcher */}
         <div className="user-dropdown">
           <span className="text-xs text-gray-400">User:</span>
