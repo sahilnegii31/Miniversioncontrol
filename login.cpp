@@ -177,3 +177,40 @@ bool registerUserDirect(User users[], int &count, const string& uname, const str
     return true;
 }
 
+// --- User & UserManager Class Implementations ---
+
+User::User() {
+    username[0] = '\0';
+    password[0] = '\0';
+}
+
+User::User(const string& uname, const string& pass) {
+    strncpy(username, uname.c_str(), 49);
+    strncpy(password, pass.c_str(), 49);
+    username[49] = '\0';
+    password[49] = '\0';
+}
+
+UserManager::UserManager() : count(0) {}
+
+int UserManager::load() {
+    return count = loadUsers(users, MAX_USERS);
+}
+
+void UserManager::save() {
+    saveUsers(users, count);
+}
+
+bool UserManager::registerAccount() {
+    return registerUser(users, count);
+}
+
+string UserManager::login() {
+    return loginUser(users, count);
+}
+
+string UserManager::runMenu() {
+    return runLoginMenu();
+}
+
+

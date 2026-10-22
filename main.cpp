@@ -156,16 +156,16 @@ void mainMenu(string username) {
     do {
         cout << "\n=======================================================\n";
         cout << "                     MINIVCS CLI                       \n";
-        cout << " User: @" << username << "          Active Branch: [" << currentBranch << "]\n";
+        cout << "\nUser: @" << username << "          Active Branch: [" << currentBranch << "]\n";
         cout << "=======================================================\n";
         cout << " [ WORKING DIRECTORY & STAGING ]\n";
         cout << "  1. Write / Edit File       2. Stage File (git add)\n";
         cout << "  3. View Staging Area       4. Unstage Last File\n\n";
-        cout << " [ COMMITS & HISTORY ]\n";
+        cout << " \n[ COMMITS & HISTORY ]\n";
         cout << "  5. Commit Staged Files     6. View Commit History (git log)\n";
         cout << "  7. Inspect Commit Diff     8. Checkout Commit\n";
         cout << "  9. Undo Last Commit       10. Revert to Commit\n\n";
-        cout << " [ BRANCH MANAGEMENT ]\n";
+        cout << " \n[ BRANCH MANAGEMENT ]\n";
         cout << " 11. View Branches & Tree   12. Create New Branch\n";
         cout << " 13. Switch Branch (checkout)\n\n";
         cout << "  0. Logout & Exit\n";

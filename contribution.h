@@ -8,20 +8,28 @@
 using namespace std;
 
 // Holds daily commit count
-struct DayActivity {
+class DayActivity {
+public:
     string date;
     int count;
+
+    DayActivity() : count(0) {}
+    DayActivity(string d, int c) : date(d), count(c) {}
 };
 
 // Holds author contribution share
-struct AuthorStats {
+class AuthorStats {
+public:
     string author;
     int commitCount;
     int percentage;
+
+    AuthorStats() : commitCount(0), percentage(0) {}
 };
 
 // Summary metrics computed from MiniVCS commit history for GitHub-style Insights
-struct ContributionSummary {
+class ContributionSummary {
+public:
     int totalCommits;
     int activeDays;
     int currentStreak;
@@ -29,6 +37,9 @@ struct ContributionSummary {
     int activeContributorsCount;
     vector<DayActivity> days;
     vector<AuthorStats> authorBreakdown;
+
+    ContributionSummary()
+        : totalCommits(0), activeDays(0), currentStreak(0), longestStreak(0), activeContributorsCount(0) {}
 };
 
 // Calculate contribution statistics from the commit history

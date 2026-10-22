@@ -22,3 +22,5 @@ run-server: server
 clean:
 	rm -f minivcs server a.out
 
+clean:
+	rm -f minivcs server a.out

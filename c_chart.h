@@ -4,22 +4,31 @@
 #include <string>
 #include <vector>
 
+using namespace std;
+
 namespace cchart {
 
 // Holds daily commit count for the histogram
-struct DailyCommit {
-    std::string date; // "YYYY-MM-DD" or "MM-DD"
+class DailyCommit {
+public:
+    string date; // "YYYY-MM-DD" or "MM-DD"
     int count;        // Number of commits
+
+    DailyCommit() : count(0) {}
+    DailyCommit(string d, int c) : date(d), count(c) {}
 };
 
 // Holds contributor commit share
-struct ContributorShare {
-    std::string author;
+class ContributorShare {
+public:
+    string author;
     int count;
     int percentage;
+
+    ContributorShare() : count(0), percentage(0) {}
+    ContributorShare(string a, int c, int p) : author(a), count(c), percentage(p) {}
 };
 
-// Standalone C++ Vector Chart Library for MiniVCS Insights
 class CommitChartGenerator {
 private:
     std::string title;
@@ -32,20 +41,20 @@ private:
 public:
     CommitChartGenerator();
 
-    void setTitle(const std::string& t);
+    void setTitle(const string& t);
     void setStats(int total, int streak, int days);
-    void addDailyData(const std::string& date, int count);
-    void addContributor(const std::string& author, int count, int percentage);
+    void addDailyData(const string& date, int count);
+    void addContributor(const string& author, int count, int percentage);
     void clear();
 
-    // 1. Renders the Commit Histogram (for Insights -> Commits)
-    std::string renderCommitHistogramSvg() const;
+    //  Renders the Commit Histogram (for Insights -> Commits)
+    string renderCommitHistogramSvg() const;
 
-    // 2. Renders the Contributor Share Chart (for Insights -> Contributors)
-    std::string renderContributorChartSvg() const;
+    // Renders the Contributor Share Chart (for Insights -> Contributors)
+    string renderContributorChartSvg() const;
 
-    // 3. Combined Overview Chart
-    std::string renderSvg() const;
+    // Combined Overview Chart
+    string renderSvg() const;
 };
 
 } // namespace cchart

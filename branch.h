@@ -8,8 +8,9 @@
 
 using namespace std;
 
-// Struct to hold branch info for display and API responses
-struct BranchDetail {
+// BranchDetail class to hold branch info for display and API responses
+class BranchDetail {
+public:
     string name;
     string parentBranch;
     string latestCommitId;
@@ -17,10 +18,13 @@ struct BranchDetail {
     string lastUpdated;
     int fileCount;
     vector<string> files;
+
+    BranchDetail() : fileCount(0) {}
 };
 
-// Node in the Branch Tree data structure
-struct TreeNode {
+// TreeNode class representing a node in the Branch Tree data structure
+class TreeNode {
+public:
     string name;
     string parentBranch;
     vector<TreeNode*> children;
@@ -50,27 +54,22 @@ public:
     void displayTree();
 };
 
-// Access the single global branch tree
 BranchTree& getGlobalBranchTree();
 
-// File & directory utility functions
 void makeDir(string path);
 bool dirExists(string path);
 bool copyFile(string src, string dst);
 void clearDirectory(string dirPath);
 void copyDirectory(string srcDir, string dstDir);
 
-// Branch file operations
 vector<string> getBranchFiles(string branchName);
 string readBranchFileContent(string branchName, string filename);
 void ensureBranchDir(string branchName);
 void syncWorkingWithBranch(string username, string branchName);
 
-// User active branch management
 string getUserCurrentBranch(string username);
 void setUserCurrentBranch(string username, string branchName);
 
-// Branch lifecycle operations
 vector<string> listAllBranches();
 void syncBranchWithCommit(string branchName, string commitId);
 void initBranchSystem(CommitNode* head);

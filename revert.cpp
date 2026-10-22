@@ -6,7 +6,7 @@
 
 using namespace std;
 
-// Restore files from commit snapshot directory to user's working directory
+
 bool restoreSnapshot(string commitId, string username) {
     string snapshotDir = "data/objects/" + commitId;
     string workingDir  = "data/working/" + username;
@@ -38,7 +38,7 @@ bool restoreSnapshot(string commitId, string username) {
     return anyFileCopied;
 }
 
-// Checkout commit without prompt (used by REST API)
+
 bool checkoutCommitDirect(CommitNode* head, string commitId, string currentUser) {
     if (head == nullptr) return false;
     CommitNode* target = findCommit(head, commitId);
@@ -46,7 +46,7 @@ bool checkoutCommitDirect(CommitNode* head, string commitId, string currentUser)
     return restoreSnapshot(commitId, currentUser);
 }
 
-// Undo last commit directly without prompt (used by REST API)
+
 CommitNode* undoLastCommitDirect(CommitNode* head, string currentUser) {
     if (head == nullptr) return nullptr;
 
@@ -78,7 +78,7 @@ CommitNode* undoLastCommitDirect(CommitNode* head, string currentUser) {
     return head;
 }
 
-// Revert to commit directly without prompt (used by REST API)
+
 CommitNode* revertToCommitDirect(CommitNode* head, string targetId, string currentUser) {
     if (head == nullptr) return nullptr;
 

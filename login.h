@@ -6,9 +6,29 @@ using namespace std;
 
 #define MAX_USERS 100
 
-struct User {
+// User class representing a registered user account
+class User {
+public:
     char username[50];
     char password[50];
+
+    User();
+    User(const string& uname, const string& pass);
+};
+
+// UserManager class encapsulating user operations
+class UserManager {
+public:
+    User users[MAX_USERS];
+    int count;
+
+    UserManager();
+
+    int load();
+    void save();
+    bool registerAccount();
+    string login();
+    string runMenu();
 };
 
 void ensureDataFolder();

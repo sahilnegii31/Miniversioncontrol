@@ -7,7 +7,9 @@
 #include <vector>
 using namespace std;
 
-struct StagedFile {
+// StagedFile class representing a file in the staging stack
+class StagedFile {
+public:
     string filename;
     string content;
 

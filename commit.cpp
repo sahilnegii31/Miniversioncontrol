@@ -283,3 +283,37 @@ void freeCommits(CommitNode* head) {
         delete temp;
     }
 }
+
+// --- CommitHistory Class Implementation ---
+
+CommitHistory::CommitHistory() : head(nullptr) {}
+
+CommitHistory::~CommitHistory() {
+    freeHistory();
+}
+
+void CommitHistory::add(string author, string message, string branch) {
+    head = addCommit(head, author, message, branch);
+}
+
+void CommitHistory::load() {
+    head = loadCommits();
+}
+
+void CommitHistory::save() {
+    saveCommits(head);
+}
+
+void CommitHistory::show() {
+    showHistory(head);
+}
+
+CommitNode* CommitHistory::find(string id) {
+    return findCommit(head, id);
+}
+
+void CommitHistory::freeHistory() {
+    freeCommits(head);
+    head = nullptr;
+}
+
