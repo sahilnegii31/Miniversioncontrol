@@ -11,7 +11,7 @@ import './App.css';
 export default function App() {
   const [currentTab, setCurrentTab] = useState('code'); // 'code', 'branches', or 'insights'
   const [currentUser, setCurrentUser] = useState('sahil');
-  const [users, setUsers] = useState([{ username: 'sahil' }, { username: 'vanshika' }]);
+  const [users, setUsers] = useState([{ username: 'sahil' }, { username: 'Mohit' }]);
   const [currentBranch, setCurrentBranch] = useState('main');
   const [branches, setBranches] = useState([]);
   const [files, setFiles] = useState([]);
