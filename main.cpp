@@ -169,6 +169,8 @@ void mainMenu(string username) {
         cout << " \n[ BRANCH MANAGEMENT ]\n";
         cout << " 11. View Branches & Tree   12. Create New Branch\n";
         cout << " 13. Switch Branch (checkout)\n\n";
+        cout << "\n[ INTERACTIVE SHELL ] \n\n";
+        cout << " 14. Run Interactive Shell\n\n";
         cout << "  0. Logout & Exit\n";
         cout << "=======================================================\n";
         cout << "Choice > ";

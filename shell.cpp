@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <string>
 #include "shell.h"
+#include <fstream> 
 #include "staging.h"
 #include "commit.h"
 #include "main.cpp"
@@ -99,16 +100,13 @@ void startShell()
                 addCommit(commitHead , username , msg , currentBranch);
             }
         }
-
         //create file
         else if (command.find("create") == 0){
             string filename = command.substr(7);
             createFile(username , filename);
 
         }
-
         // ADD FILE
-
         else if(command.find("add") == 0){
             string fileName = command.substr(4);
 
