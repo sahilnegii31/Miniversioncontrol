@@ -1,6 +1,8 @@
-// #ifndef SHELL_H
-// #define SHELL_H
+#ifndef SHELL_H
+#define SHELL_H
+#include "staging.h"
 
-// void startShell(StagingArea& ,CommitNode*, string , string, string);
 
-// #endif
+void startShell();
+
+#endif

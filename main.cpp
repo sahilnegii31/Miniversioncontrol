@@ -1,4 +1,4 @@
-#include <iostream>
+#include "iostream"
 #include <fstream>
 #include <sys/stat.h>
 #include "login.h"
@@ -6,6 +6,7 @@
 #include "staging.h"
 #include "revert.h"
 #include "branch.h"
+#include "shell.h"
 
 using namespace std;
 
@@ -237,7 +238,8 @@ void mainMenu(string username) {
             case 13:
                 switchBranchMenu(username, currentBranch);
                 break;
-
+            case 14 :
+                startShell();
             case 0:
                 cout << "Logged out successfully. Goodbye, " << username << "!\n";
                 break;
