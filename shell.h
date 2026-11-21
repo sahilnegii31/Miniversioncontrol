@@ -1,5 +1,9 @@
 #ifndef SHELL_H
 #define SHELL_H
-#include "staging.h"
-void startShell();
+
+#include <string>
+using namespace std;
+
+void startShell(string username = "");
+
 #endif
