@@ -19,7 +19,7 @@ BranchTree::~BranchTree() {
     destroy(root);
 }
 
-// Search for a branch node recursively in the tree
+//searching for a node 
 TreeNode* BranchTree::search(TreeNode* curr, string bName) {
     if (curr == nullptr) return nullptr;
     if (curr->name == bName) return curr;

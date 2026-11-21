@@ -240,8 +240,9 @@ void mainMenu(string username) {
             case 13:
                 switchBranchMenu(username, currentBranch);
                 break;
-            case 14 :
-                startShell();
+            case 14:
+                startShell(username);
+                break;
             case 0:
                 cout << "Logged out successfully. Goodbye, " << username << "!\n";
                 break;

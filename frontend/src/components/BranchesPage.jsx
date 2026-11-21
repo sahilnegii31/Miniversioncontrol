@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GitBranch, Plus, Check, Trash2, Eye, Folder, FileText, ArrowRightCircle, RefreshCw, X, AlertCircle } from 'lucide-react';
+import { GitBranch, Plus, Check, Trash2, Eye, Folder, FileText, ArrowRightCircle, RefreshCw, X, Search, GitFork, CornerDownRight } from 'lucide-react';
 import { api } from '../api';
 
 export default function BranchesPage({
@@ -15,6 +15,7 @@ export default function BranchesPage({
   const [newBranchName, setNewBranchName] = useState('');
   const [sourceBranch, setSourceBranch] = useState(currentBranch || 'main');
   const [switchAfterCreate, setSwitchAfterCreate] = useState(true);
+  const [searchFilter, setSearchFilter] = useState('');
 
   // Inspector modal state for viewing branch files
   const [inspectingBranch, setInspectingBranch] = useState(null);
@@ -70,202 +71,266 @@ export default function BranchesPage({
   };
 
   const otherBranches = branches.filter((b) => b.name !== 'main');
+  const filteredOther = otherBranches.filter((b) =>
+    b.name.toLowerCase().includes(searchFilter.toLowerCase())
+  );
 
   return (
     <div className="branches-container">
-      {/* Branches Header */}
-      <div className="panel-card mb-6">
-        <div className="flex justify-between items-center flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400">
-              <GitBranch size={22} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-gray-100">Branches Module</h2>
-                <span className="count-pill">{branches.length} branch{branches.length === 1 ? '' : 'es'}</span>
-              </div>
-              <p className="text-xs text-gray-400 mt-1">
-                Each branch physically maintains its own files in{' '}
-                <code className="text-emerald-400 font-mono">data/branches/&lt;name&gt;/</code>.
-              </p>
-            </div>
+      {/* 1. Header Card */}
+      <div className="branches-header-card">
+        <div className="branches-header-left">
+          <div className="branches-icon-badge">
+            <GitBranch size={26} />
           </div>
+          <div>
+            <div className="branches-header-title-row">
+              <h2 className="branches-header-title">Branch Management</h2>
+              <span className="count-pill">{branches.length} total branches</span>
+              <span className="branch-badge badge-active">
+                <Check size={12} /> Active: {currentBranch}
+              </span>
+            </div>
+            <p className="branches-header-subtitle">
+              Physical Directory Snapshots — Each branch maintains its own isolated folder at{' '}
+              <code className="branch-meta-path">data/branches/&lt;name&gt;/</code>
+            </p>
+          </div>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onRefresh}
-              className="btn-sm btn-outline flex items-center gap-1.5"
-              title="Refresh branches"
-            >
-              <RefreshCw size={14} /> Refresh
-            </button>
-            <button
-              onClick={() => {
-                setSourceBranch(currentBranch || 'main');
-                setShowCreateModal(true);
-              }}
-              className="btn-sm btn-primary flex items-center gap-1.5"
-            >
-              <Plus size={15} /> New Branch
-            </button>
-          </div>
+        <div className="branches-header-actions">
+          <button
+            onClick={onRefresh}
+            className="btn-sm btn-outline"
+            title="Refresh branches list"
+          >
+            <RefreshCw size={14} /> Refresh
+          </button>
+          <button
+            onClick={() => {
+              setSourceBranch(currentBranch || 'main');
+              setShowCreateModal(true);
+            }}
+            className="btn-sm btn-primary"
+          >
+            <Plus size={15} /> New Branch
+          </button>
         </div>
       </div>
 
-      {/* Default Branch Section */}
-      <div className="panel-card mb-6">
-        <div className="panel-header">
-          <div className="flex items-center gap-2">
-            <GitBranch size={16} className="text-emerald-400" />
-            <h3 className="panel-title">Default Branch</h3>
-            <span className="bg-emerald-500/15 text-emerald-400 text-xs px-2 py-0.5 rounded-full border border-emerald-500/30 font-medium">
-              Default
-            </span>
+      {/* 2. Visual Branch Tree & Search Bar */}
+      <div className="panel-card" style={{ padding: '16px 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <GitFork size={16} style={{ color: 'var(--accent-purple)' }} />
+            <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>N-ary Branch Hierarchy</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>(Tree Traversal)</span>
           </div>
-          <span className="text-xs text-gray-400 font-mono">data/branches/main/</span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
+            <Search size={14} style={{ color: 'var(--text-muted)', position: 'absolute', left: '10px' }} />
+            <input
+              type="text"
+              placeholder="Filter branches..."
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              className="branch-form-input"
+              style={{ paddingLeft: '32px', paddingRight: '12px', height: '32px', fontSize: '0.8rem', width: '220px' }}
+            />
+          </div>
         </div>
 
-        <div className="branch-card default-branch-card p-4 rounded-lg bg-[#0d1117] border border-[#30363d] flex justify-between items-center flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold">
-              <GitBranch size={16} />
+        <div className="branch-tree-box">
+          <div>🌳 Branch Hierarchy Tree (Root: main)</div>
+          <div style={{ color: '#3fb950', marginTop: '4px' }}>
+            main {defaultBranch.name === currentBranch ? '★ [ACTIVE]' : ''} ({defaultBranch.fileCount} files)
+          </div>
+          {otherBranches.length === 0 ? (
+            <div style={{ color: '#6e7681', paddingLeft: '20px' }}>
+              └── (no custom branches created yet)
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-base font-semibold text-gray-100 font-mono">main</span>
+          ) : (
+            otherBranches.map((b, idx) => {
+              const isLast = idx === otherBranches.length - 1;
+              const prefix = isLast ? '└── ' : '├── ';
+              return (
+                <div key={b.name} style={{ paddingLeft: '20px', color: b.name === currentBranch ? '#58a6ff' : '#d2a8ff' }}>
+                  {prefix}{b.name} (from: {b.parentBranch || 'main'}) {b.name === currentBranch ? '★ [ACTIVE]' : ''} [{b.fileCount} files]
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* 3. Default Branch Section */}
+      <div className="panel-card" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <GitBranch size={16} style={{ color: '#3fb950' }} />
+            <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Default Branch</span>
+            <span className="branch-badge badge-default">Default</span>
+          </div>
+          <span className="branch-meta-path">data/branches/main/</span>
+        </div>
+
+        <div className={`branch-card default-branch ${defaultBranch.name === currentBranch ? 'active-branch' : ''}`}>
+          <div className="branch-card-left">
+            <div className="branch-avatar-icon main">
+              <GitBranch size={18} />
+            </div>
+            <div className="branch-info-col">
+              <div className="branch-name-row">
+                <span className="branch-name-text">main</span>
                 {defaultBranch.name === currentBranch && (
-                  <span className="bg-blue-500/20 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-500/30 flex items-center gap-1">
-                    <Check size={11} /> Checked Out (@{currentUser})
+                  <span className="branch-badge badge-active">
+                    <Check size={12} /> Checked Out (@{currentUser})
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
-                <span>Latest: <strong className="text-gray-300 font-mono">{defaultBranch.latestCommitId}</strong></span>
+              <div className="branch-meta-row">
+                <span className="branch-meta-item">
+                  Commit: <strong style={{ color: '#e6edf3', fontFamily: 'monospace' }}>{defaultBranch.latestCommitId}</strong>
+                </span>
                 <span>•</span>
-                <span>Files: <strong className="text-purple-400">{defaultBranch.fileCount}</strong></span>
+                <span className="branch-meta-item">
+                  Files: <strong style={{ color: 'var(--accent-purple)' }}>{defaultBranch.fileCount}</strong>
+                </span>
                 <span>•</span>
-                <span className="truncate max-w-xs">{defaultBranch.latestCommitMsg}</span>
+                <span className="branch-meta-item" style={{ maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  "{defaultBranch.latestCommitMsg}"
+                </span>
+                {defaultBranch.lastUpdated && (
+                  <>
+                    <span>•</span>
+                    <span style={{ color: 'var(--text-muted)' }}>{defaultBranch.lastUpdated}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="branch-card-actions">
             <button
               onClick={() => handleOpenInspector('main')}
-              className="btn-sm btn-outline flex items-center gap-1 text-xs"
+              className="btn-sm btn-outline"
               title="Inspect files in data/branches/main/"
             >
-              <Eye size={13} /> View Files ({defaultBranch.fileCount})
+              <Eye size={14} /> View Files ({defaultBranch.fileCount})
             </button>
             {defaultBranch.name !== currentBranch && (
               <button
                 onClick={() => onSwitchBranch('main')}
-                className="btn-sm btn-primary flex items-center gap-1 text-xs"
+                className="btn-sm btn-emerald"
+                title="Switch active branch to main"
               >
-                <ArrowRightCircle size={13} /> Switch to main
+                <ArrowRightCircle size={14} /> Switch to main
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Other Branches Section */}
-      <div className="panel-card">
-        <div className="panel-header">
-          <div className="flex items-center gap-2">
-            <Folder size={16} className="text-purple-400" />
-            <h3 className="panel-title">Feature & Team Branches ({otherBranches.length})</h3>
+      {/* 4. Other Branches Section */}
+      <div className="panel-card" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Folder size={16} style={{ color: 'var(--accent-purple)' }} />
+            <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Feature & Development Branches ({otherBranches.length})</span>
           </div>
-          <span className="text-xs text-gray-400">Isolated workspace folders</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Isolated workspace folders</span>
         </div>
 
         {otherBranches.length === 0 ? (
-          <div className="empty-hint p-8 text-center text-gray-400">
-            <GitBranch size={32} className="mx-auto mb-2 text-gray-600" />
-            <p className="text-sm font-medium">No custom branches created yet.</p>
-            <p className="text-xs text-gray-500 mt-1">
-              Click <strong>"New Branch"</strong> to create an isolated branch with its own physical files.
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <GitBranch size={36} style={{ margin: '0 auto 12px auto', opacity: 0.4 }} />
+            <p style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-secondary)' }}>No custom branches created yet.</p>
+            <p style={{ fontSize: '0.8rem', marginTop: '6px' }}>
+              Click <strong style={{ color: 'var(--text-primary)' }}>"New Branch"</strong> to branch off with your own physical directory and files.
             </p>
           </div>
+        ) : filteredOther.length === 0 ? (
+          <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            No branches match "{searchFilter}".
+          </div>
         ) : (
-          <div className="branch-grid space-y-3">
-            {otherBranches.map((b) => {
+          <div>
+            {filteredOther.map((b) => {
               const isActive = b.name === currentBranch;
               return (
                 <div
                   key={b.name}
-                  className={`branch-row p-4 rounded-lg bg-[#0d1117] border ${
-                    isActive ? 'border-purple-500/50 bg-purple-500/5' : 'border-[#30363d]'
-                  } flex justify-between items-center flex-wrap gap-3 transition-all`}
+                  className={`branch-card ${isActive ? 'active-branch' : ''}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center font-bold ${
-                        isActive
-                          ? 'bg-purple-500/20 border border-purple-500/40 text-purple-400'
-                          : 'bg-gray-800 border border-gray-700 text-gray-400'
-                      }`}
-                    >
-                      <GitBranch size={16} />
+                  <div className="branch-card-left">
+                    <div className="branch-avatar-icon feature">
+                      <GitBranch size={18} />
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-base font-semibold text-gray-100 font-mono">{b.name}</span>
+                    <div className="branch-info-col">
+                      <div className="branch-name-row">
+                        <span className="branch-name-text">{b.name}</span>
                         {isActive && (
-                          <span className="bg-purple-500/20 text-purple-400 text-xs px-2 py-0.5 rounded-full border border-purple-500/30 flex items-center gap-1">
-                            <Check size={11} /> Checked Out (@{currentUser})
+                          <span className="branch-badge badge-active">
+                            <Check size={12} /> Checked Out (@{currentUser})
                           </span>
                         )}
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <CornerDownRight size={12} /> from <strong style={{ color: '#3fb950' }}>{b.parentBranch || 'main'}</strong>
+                        </span>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-gray-400 mt-1 flex-wrap">
-                        <span>Branched from: <strong className="text-emerald-400 font-mono">{b.parentBranch || 'main'}</strong></span>
+                      <div className="branch-meta-row">
+                        <span className="branch-meta-path">data/branches/{b.name}/</span>
                         <span>•</span>
-                        <span>Folder: <code className="text-gray-300">data/branches/{b.name}/</code></span>
+                        <span className="branch-meta-item">
+                          Files: <strong style={{ color: 'var(--accent-purple)' }}>{b.fileCount}</strong>
+                        </span>
                         <span>•</span>
-                        <span>Files: <strong className="text-purple-400">{b.fileCount}</strong></span>
+                        <span className="branch-meta-item">
+                          Commit: <strong style={{ color: '#e6edf3', fontFamily: 'monospace' }}>{b.latestCommitId}</strong>
+                        </span>
                         <span>•</span>
-                        <span>Commit: <strong className="text-gray-300 font-mono">{b.latestCommitId}</strong></span>
-                        <span>•</span>
-                        <span className="truncate max-w-xs">{b.latestCommitMsg}</span>
+                        <span className="branch-meta-item" style={{ maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          "{b.latestCommitMsg}"
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="branch-card-actions">
                     <button
                       onClick={() => handleOpenInspector(b.name)}
-                      className="btn-sm btn-outline flex items-center gap-1 text-xs"
-                      title={`Inspect files in data/branches/${b.name}/`}
+                      className="btn-sm btn-outline"
+                      title={`Inspect files inside data/branches/${b.name}/`}
                     >
-                      <Eye size={13} /> View Files ({b.fileCount})
+                      <Eye size={14} /> View Files ({b.fileCount})
                     </button>
 
                     {isActive ? (
-                      <span className="btn-sm bg-purple-500/10 text-purple-400 border border-purple-500/30 text-xs flex items-center gap-1 cursor-default">
-                        <Check size={13} /> Active
+                      <span className="btn-sm" style={{ backgroundColor: 'rgba(56, 139, 253, 0.15)', color: 'var(--accent-blue)', border: '1px solid rgba(56, 139, 253, 0.35)', cursor: 'default' }}>
+                        <Check size={14} /> Active
                       </span>
                     ) : (
                       <button
                         onClick={() => onSwitchBranch(b.name)}
-                        className="btn-sm btn-primary flex items-center gap-1 text-xs"
-                        title={`Switch working directory to ${b.name}`}
+                        className="btn-sm btn-primary"
+                        title={`Switch active branch to ${b.name}`}
                       >
-                        <ArrowRightCircle size={13} /> Checkout
+                        <ArrowRightCircle size={14} /> Checkout
                       </button>
                     )}
 
                     {!isActive && (
                       <button
                         onClick={() => {
-                          if (window.confirm(`Are you sure you want to delete branch '${b.name}' and remove data/branches/${b.name}/?`)) {
+                          if (window.confirm(`Are you sure you want to delete branch '${b.name}' and delete folder data/branches/${b.name}/?`)) {
                             onDeleteBranch(b.name);
                           }
                         }}
-                        className="btn-sm btn-icon text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        className="btn-icon"
+                        style={{ color: 'var(--accent-red)', padding: '6px' }}
                         title={`Delete branch ${b.name}`}
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={16} />
                       </button>
                     )}
                   </div>
@@ -278,74 +343,76 @@ export default function BranchesPage({
 
       {/* ================= MODAL: CREATE NEW BRANCH ================= */}
       {showCreateModal && (
-        <div className="modal-overlay">
-          <div className="modal-dialog max-w-md">
-            <div className="modal-header">
-              <div className="flex items-center gap-2">
-                <GitBranch size={18} className="text-purple-400" />
-                <h3 className="modal-title">Create New Branch</h3>
+        <div className="branch-modal-overlay">
+          <div className="branch-modal-card">
+            <div className="branch-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <GitBranch size={18} style={{ color: 'var(--accent-purple)' }} />
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Create New Branch</h3>
               </div>
-              <button onClick={() => setShowCreateModal(false)} className="btn-sm btn-icon">
+              <button onClick={() => setShowCreateModal(false)} className="btn-icon">
                 <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateSubmit} className="modal-body space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">
-                  Branch Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. feature-login, bugfix-auth, dev"
-                  value={newBranchName}
-                  onChange={(e) => setNewBranchName(e.target.value.replace(/\s+/g, '-'))}
-                  className="input-text w-full font-mono"
-                  autoFocus
-                  required
-                />
-                <p className="text-[11px] text-gray-400 mt-1">
-                  A physical directory will be created at:{' '}
-                  <code className="text-emerald-400 font-mono">
-                    data/branches/{newBranchName || '<name>'}/
-                  </code>
-                </p>
+            <form onSubmit={handleCreateSubmit}>
+              <div className="branch-modal-body">
+                <div className="branch-form-group">
+                  <label className="branch-form-label">
+                    Branch Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. feature-login, bugfix, dev"
+                    value={newBranchName}
+                    onChange={(e) => setNewBranchName(e.target.value.replace(/\s+/g, '-'))}
+                    className="branch-form-input"
+                    autoFocus
+                    required
+                  />
+                  <div className="branch-form-hint">
+                    A physical directory will be created at:{' '}
+                    <code className="branch-meta-path">
+                      data/branches/{newBranchName || '<name>'}/
+                    </code>
+                  </div>
+                </div>
+
+                <div className="branch-form-group">
+                  <label className="branch-form-label">
+                    Branch Off From (Source)
+                  </label>
+                  <select
+                    value={sourceBranch}
+                    onChange={(e) => setSourceBranch(e.target.value)}
+                    className="branch-form-select"
+                  >
+                    {branches.map((b) => (
+                      <option key={b.name} value={b.name}>
+                        {b.name} ({b.fileCount} files)
+                      </option>
+                    ))}
+                  </select>
+                  <div className="branch-form-hint">
+                    All snapshot files from <code style={{ color: 'var(--accent-purple)', fontFamily: 'monospace' }}>{sourceBranch}</code> will be cloned into the new branch folder.
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '6px' }}>
+                  <input
+                    type="checkbox"
+                    id="switchNow"
+                    checked={switchAfterCreate}
+                    onChange={(e) => setSwitchAfterCreate(e.target.checked)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <label htmlFor="switchNow" style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
+                    Switch working directory to this branch immediately
+                  </label>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">
-                  Branch From (Source)
-                </label>
-                <select
-                  value={sourceBranch}
-                  onChange={(e) => setSourceBranch(e.target.value)}
-                  className="select-input w-full font-mono"
-                >
-                  {branches.map((b) => (
-                    <option key={b.name} value={b.name}>
-                      {b.name} ({b.fileCount} files)
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[11px] text-gray-400 mt-1">
-                  All files from <code className="text-purple-400 font-mono">{sourceBranch}</code> will be copied into the new branch folder.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="switchNow"
-                  checked={switchAfterCreate}
-                  onChange={(e) => setSwitchAfterCreate(e.target.checked)}
-                  className="rounded border-gray-700 text-purple-600 focus:ring-purple-500"
-                />
-                <label htmlFor="switchNow" className="text-xs text-gray-300 select-none cursor-pointer">
-                  Switch to this branch immediately after creation
-                </label>
-              </div>
-
-              <div className="modal-footer pt-4 border-t border-[#30363d] flex justify-end gap-2">
+              <div className="branch-modal-footer">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
@@ -364,78 +431,76 @@ export default function BranchesPage({
 
       {/* ================= MODAL: BRANCH FILES INSPECTOR ================= */}
       {inspectingBranch && (
-        <div className="modal-overlay">
-          <div className="modal-dialog max-w-3xl">
-            <div className="modal-header">
-              <div className="flex items-center gap-2">
-                <Folder size={18} className="text-purple-400" />
-                <h3 className="modal-title">
-                  Files in <span className="font-mono text-emerald-400">data/branches/{inspectingBranch}/</span>
+        <div className="branch-modal-overlay">
+          <div className="branch-modal-card wide">
+            <div className="branch-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Folder size={18} style={{ color: 'var(--accent-purple)' }} />
+                <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
+                  Files in <span style={{ fontFamily: 'monospace', color: '#3fb950' }}>data/branches/{inspectingBranch}/</span>
                 </h3>
               </div>
-              <div className="flex items-center gap-2">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
                   onClick={() => handleOpenInspector(inspectingBranch)}
-                  className="btn-sm btn-icon"
+                  className="btn-icon"
                   title="Reload files from disk"
                 >
                   <RefreshCw size={14} />
                 </button>
-                <button onClick={() => setInspectingBranch(null)} className="btn-sm btn-icon">
+                <button onClick={() => setInspectingBranch(null)} className="btn-icon">
                   <X size={16} />
                 </button>
               </div>
             </div>
 
-            <div className="modal-body p-4">
+            <div className="branch-modal-body" style={{ padding: '16px' }}>
               {loadingFiles ? (
-                <div className="p-8 text-center text-gray-400">Loading branch files...</div>
+                <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  Loading branch snapshot files...
+                </div>
               ) : branchFiles.length === 0 ? (
-                <div className="empty-hint p-8 text-center text-gray-400">
-                  <FileText size={28} className="mx-auto mb-2 text-gray-600" />
-                  No files stored in this branch folder yet.
+                <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <FileText size={32} style={{ margin: '0 auto 8px auto', opacity: 0.5 }} />
+                  No files stored in this branch directory yet.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* File List Column */}
-                  <div className="border border-[#30363d] rounded-lg bg-[#0d1117] p-2 space-y-1">
-                    <div className="text-xs font-semibold text-gray-400 px-2 py-1 border-b border-[#30363d] mb-1">
-                      Files ({branchFiles.length})
+                <div className="inspector-layout">
+                  {/* Left Column: File List */}
+                  <div className="inspector-files-list">
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', padding: '6px 8px', borderBottom: '1px solid var(--border-color)', marginBottom: '6px' }}>
+                      SNAPSHOT FILES ({branchFiles.length})
                     </div>
                     {branchFiles.map((f) => (
                       <button
                         key={f.name}
                         onClick={() => handleOpenFileContent(inspectingBranch, f.name)}
-                        className={`w-full text-left px-2.5 py-1.5 rounded text-xs flex items-center justify-between font-mono ${
-                          selectedFileName === f.name
-                            ? 'bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/30'
-                            : 'text-gray-300 hover:bg-[#161b22]'
-                        }`}
+                        className={`inspector-file-btn ${selectedFileName === f.name ? 'selected' : ''}`}
                       >
-                        <span className="flex items-center gap-1.5 truncate">
-                          <FileText size={13} className="text-gray-400 flex-shrink-0" />
-                          <span className="truncate">{f.name}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <FileText size={13} style={{ flexShrink: 0 }} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</span>
                         </span>
-                        <span className="text-[10px] text-gray-500 flex-shrink-0">{f.size} B</span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>{f.size} B</span>
                       </button>
                     ))}
                   </div>
 
-                  {/* File Content Preview Column */}
-                  <div className="md:col-span-2 border border-[#30363d] rounded-lg bg-[#0d1117] p-3 flex flex-col">
-                    <div className="flex justify-between items-center border-b border-[#30363d] pb-2 mb-2">
-                      <span className="text-xs font-mono font-semibold text-gray-200 flex items-center gap-1.5">
-                        <FileText size={14} className="text-emerald-400" />
+                  {/* Right Column: File Content Preview */}
+                  <div className="inspector-preview-box">
+                    <div className="inspector-preview-header">
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <FileText size={14} style={{ color: '#3fb950' }} />
                         {selectedFileName || 'Select a file to inspect'}
                       </span>
-                      <span className="text-[10px] text-gray-500">Read-only Snapshot</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Read-only Physical Snapshot</span>
                     </div>
 
-                    <div className="flex-1 overflow-auto max-h-64 bg-[#161b22] p-3 rounded font-mono text-xs text-gray-200 whitespace-pre">
+                    <div className="inspector-code-content">
                       {selectedFileContent !== null ? (
-                        selectedFileContent || <span className="text-gray-500 italic">(Empty file)</span>
+                        selectedFileContent || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>(Empty file)</span>
                       ) : (
-                        <span className="text-gray-500 italic">Select a file on the left to preview content</span>
+                        <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Select a file on the left to preview its content</span>
                       )}
                     </div>
                   </div>
@@ -443,9 +508,9 @@ export default function BranchesPage({
               )}
             </div>
 
-            <div className="modal-footer pt-3 border-t border-[#30363d] flex justify-between items-center">
-              <span className="text-xs text-gray-400">
-                To edit files on this branch, switch to it from the branches list.
+            <div className="branch-modal-footer">
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginRight: 'auto' }}>
+                Tip: To edit files on this branch, checkout this branch from the list.
               </span>
               <button
                 type="button"
@@ -461,4 +526,3 @@ export default function BranchesPage({
     </div>
   );
 }
-
